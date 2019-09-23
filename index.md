@@ -47,15 +47,11 @@ Tobias Pflug (tobias.pflug@tweag.io)
 
 ## Agenda
 
-* **Part 1** : Getting To Know Nix
-    - About
-    - Concepts
-    - Language
-    - Tools
-* **Part 2** : Haskell & Nix
-    - Nixifying a project
-    - Common usecase scenarios
-    - Creating a docker image
+* **Part 1** : **Getting To Know Nix**
+We will get to know Nix, use the cli tools and learn about the most relevant concepts to grok Nix.
+
+* **Part 2** : **Haskell & Nix**
+We will take an existing Haskell project, nixify it and make use of the Haskell integration offered by Nix
 
 ---
 
@@ -79,7 +75,7 @@ nix (Nix) 2.2.2
 - A Functional Expression Language
 - A Package Manager
 - An Operating System (NixOS)
-- --Not-- a docker rival
+- **Not** a docker rival
 
 ---
 
@@ -95,7 +91,7 @@ So someone wrote another package manager ...
 
 Nix has some very nice qualities
 
-- deterministic & reproducible (..\...)
+- deterministic & reproducible (*)
 - stateless & declarative
 - actually hard to screw up
 
@@ -103,7 +99,7 @@ Nix has some very nice qualities
 
 ## Part 1: About
 
-Nix also has some not-so-nice qualities
+Nix also has some not-so-nice sides
 
 - Only package manager with the learning curve of Haskell
 - Docs are improving but sometimes lacking
@@ -112,9 +108,60 @@ Nix also has some not-so-nice qualities
 
 ---
 
-## Part 1: Nix Concepts
+## Part 1: Let's Jump Right In!
 
-We'll have to go through some central aspects of Nix ...
+:computer: **hands-on** :computer:
+
+- Install **ghc** using `nix-env -i`
+- Check with `nix-env -q`
+- **Where** is ghc installed to? (hint: symlinks)
+- **Uninstall** ghc using `nix-env -e`
+
+---
+
+## Part 1: Let's Jump Right In!
+
+So where is ghc installed to exactly
+
+```
+$ which ghc
+/home/gilligan/.nix-profile/bin/ghc
+```
+
+```shell
+$ readlink $(which ghc)
+/nix/store/gvshp9yvc6gql09r3cyryj2zgsnfk6br-ghc-8.6.4/bin/ghc
+```
+
+Let's have a look at `~/.nix-profile` as well ...
+
+---
+
+## Part 1: Let's Jump Right In!
+
+Our user profile directory is symlinked
+```shell
+$ ls -l ~/.nix-profile
+~/.nix-profile -> /nix/var/nix/profiles/per-user/gilligan/profile
+```
+
+And our active user profile is also a symlink
+```shell
+ls -l ~/.nix-profile -> /nix/var/nix/profiles/per-user/gilligan/profile
+/nix/var/nix/profiles/per-user/gilligan/profile -> profile-150-link
+```
+
+---
+
+## Part 1: Let's Jump Right In!
+
+What have we found out so far 
+
+- `nix-env -i` manipulates the user profile
+- Whatever you install ends up in the **nix store**
+- Directories in the store all include **hashes**
+
+:arrow_right: **Let's talk about the store ...**
 
 ---
 
@@ -124,8 +171,10 @@ The **Nix Store** is a central part of Nix
 
 - Your nix store lives at `/nix/store/`
 - Everything you install ends up in your nix store
-- Packages are isolated in their own directory
 - Packages are installed to `/nix/store/<HASH>-<name>`
+- We need _Derivations_ to add something to the store
+
+:arrow_right: **What are Derivations ?**
 
 ---
 
@@ -133,19 +182,21 @@ The **Nix Store** is a central part of Nix
 
 A **Derivation** is _build action_
 
-- Takes inputs and when run creates output(s) in the store
+- Takes inputs and when run, creates output(s) in the store
 - Can describe a single plain text file or ghc
 - All inputs of the derivation determine the associated hash
+
+:arrow_right: **Let's look at a little analogy...**
 
 ---
 
 ## Part 1: Nix Concepts
 
-How do we go from `.nix` file to something in the nix store?
-
 - `.nix` ~= `.c` : human readable build description
 - `.drv` ~= `.o` : machine readable representation
 - `store output path` ~= resulting compiled&linked output
+
+:arrow_right: **Nice but where do the `nix` files come from?**
 
 ---
 
@@ -156,6 +207,8 @@ You might have heard of **nixpkgs**
 - Maintained at https://github.com/NixOS/nixpkgs
 - Official nix expression collection
 - Also contains all of NixOS
+
+:arrow_right: **Do you have to clone/track this repo? Nope...**
 
 ---
 
@@ -175,7 +228,6 @@ Packages can be installed from different **channels**
 
 ---
 
-
 ## Part 1: Nix Language
 
 Fortunately the Nix language is quite simple
@@ -183,6 +235,29 @@ Fortunately the Nix language is quite simple
 - Purely functional
 - Lazy Evaluation
 - Domain Specific
+
+:arrow_right: Let's quickly go through the most relevant features
+
+---
+
+## Part 1: Nix Language
+
+Before we begin: If you want to try anything while we go through the
+language features, use `nix repl`:
+
+```shell
+$ nix repl
+Welcome to Nix version 2.2.2. Type :? for help.
+
+nix-repl> :l <nixpkgs>
+Added 10091 variables.
+
+nix-repl> 1 + 1
+2
+
+nix-repl>
+```
+
 
 ---
 
@@ -337,7 +412,7 @@ in
 
 `nixpkgs` is the collection of all official nix expressions. We can refer to the **system installed nixpkgs** set in a nix expression via `<nixpkgs>`
 
-:question: **audience question** :question: 
+:computer: **hands-on** :computer:
 
 :arrow_right: Why can referring to `<nixpkgs>` be problematic?
 :arrow_right: How could we avoid that?
@@ -359,6 +434,30 @@ with (import <nixpkgs> {}); pkgs.callPackage ./foo.nix { }
 
 ---
 
+## Part 1: Nix Language
+
+We have already learned about derivations. Nix has a built-in derivation function:
+
+```nix
+builtins.derivation { name = "haskellx"; 
+                      builder = "/bin/sh"; 
+                      system = "x86_64-linux";
+                      args = [ "-c" "echo done > $out; exit 0" ];
+                    }
+```
+
+In practice you usually don't use this, you use `stdenv.mkDerivation` instead :exclamation:
+
+---
+
+## Part 1: Nix Language
+
+**That's it for the language. Any Questions? What's missing :)**
+
+:arrow_right: Next let's move on to talking about tooling
+
+---
+
 ## Part 1: Nix Tools 
 
 Let's get to know some of the common Nix tools. We have already learned about the concept of channels. We can use the `nix-channel` tool to work with them:
@@ -374,27 +473,15 @@ $ nix-channel --update # should produce some output
 
 ## Part 1: Nix Tools 
 
-`nix-env` is the swiss-army-knife of Nix and you can use it to install or remove software. Let's install **ghc** into our **user profile**
-
-
-:computer: **hands-on** :computer:
-
-- You can use `nix-env -qaP` to list available packages
-- Use `nix-env -i` to install
-- **Where** is ghc installed to? (Follow the symlinks :grinning:)
-- Use `nix-env -e` to uninstall (Is it really gone? From your disk?)
-
----
-
-## Part 1: Nix Tools 
-
-`nix-shell` is a great way to create ad-hoc environments. We don't even have to install **ghc** at all.
+`nix-shell` is a great way to create ad-hoc environments!
 
 :computer: **hands-on** :computer:
 
 - Use `nix-shell` to get a shell with `ghc` and `cabal-install`
 - Use `-p` to specify packages
 - Try running the command with `--pure`, what's different?
+
+:arrow_right: **ad-hoc is nice, declarative is nicer! ...**
 
 ---
 
@@ -412,8 +499,8 @@ pkgs.mkShell {
 
 :computer: **hands-on** :computer:
 
-- Save the above in `shell.nix`
-- What do you expect to see when you run `nix-shell` ?
+- Can you mentally parse & undertand the above code? **Questions?**
+- Save the above in `shell.nix` & run `nix-shell`
 
 ---
 
