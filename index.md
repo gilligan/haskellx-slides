@@ -48,7 +48,7 @@ Tobias Pflug (tobias.pflug@tweag.io)
 ## Agenda
 
 * **Part 1** : **Getting To Know Nix**
-We will get to know Nix, use the cli tools and learn about the most relevant concepts to grok Nix.
+Understanding Nix, learning about the most relevant concepts and tools.
 
 * **Part 2** : **Haskell & Nix**
 We will take an existing Haskell project, nixify it and make use of the Haskell integration offered by Nix
@@ -74,16 +74,6 @@ nix (Nix) 2.2.2
 
 - A Functional Expression Language
 - A Package Manager
-- An Operating System (NixOS)
-- **Not** a docker rival
-
----
-
-## Part 1: About
-
-So someone wrote another package manager ...
-
-![wat](https://media.giphy.com/media/8PBfNDoySmsRc49P4F/giphy.gif)
 
 ---
 
@@ -91,20 +81,35 @@ So someone wrote another package manager ...
 
 Nix has some very nice qualities
 
-- deterministic & reproducible (*)
-- stateless & declarative
-- actually hard to screw up
+- **reproducibility**: No more _"but it (works for me|worked yesterday)"_
+- **reliable**: With atomic upgrades & rollbacks it's hard(er) to screw up
+- **functional**: If you hate repetitive YAML files you might like Nix 
 
 ---
 
 ## Part 1: About
 
-Nix also has some not-so-nice sides
+Nix also has some _not-so-nice_ sides
 
-- Only package manager with the learning curve of Haskell
-- Docs are improving but sometimes lacking
-- CLI tools U/X still need some more :heart:
-- Colliding with the impure rest of the world
+- **complexity**: Only pkg manager w/ the learning curve of Haskell
+- **documentation**: Getting better but sometimes still lacking
+- **purity**: Colliding with the impure rest of the world
+
+---
+
+## Part 1: About
+
+Some important bits up front
+
+- Nix is available for Linux/macOS
+- Currently transitioning cli: `nix-*` vs `nix *`
+- All packages/libraries/NixOS are maintained in `nixpkgs` (GitHub)
+- Packages are available through subscribable **channels**
+
+
+---
+
+# Enough Talking, Let's start using Nix right away ..
 
 ---
 
@@ -112,28 +117,173 @@ Nix also has some not-so-nice sides
 
 :computer: **hands-on** :computer:
 
-- Install **ghc** using `nix-env -i`
-- Check with `nix-env -q`
-- **Where** is ghc installed to? (hint: symlinks)
-- **Uninstall** ghc using `nix-env -e`
+- Install **cowsay** using **nix-env**: `nix-env -i cowsay`
+- Check it's installed using `nix-env -q`
+- **Question**: where is cowsay installed to :question:
 
 ---
 
-## Part 1: Let's Jump Right In!
+## Part 1: Where are things installed to?
 
-So where is ghc installed to exactly
-
+**Q**: Where is cowsay installed to?
+**A**: Let's find out ...
 ```
-$ which ghc
-/home/gilligan/.nix-profile/bin/ghc
+$ which cowsay
+/home/gilligan/.nix-profile/bin/cowsay
 ```
 
 ```shell
-$ readlink $(which ghc)
-/nix/store/gvshp9yvc6gql09r3cyryj2zgsnfk6br-ghc-8.6.4/bin/ghc
+$ readlink $(which cowsay)
+/nix/store/mhfaj4miflqz1abn60nnkrpaxcg310i9-cowsay-3.03+dfsg2/bin/cowsay
 ```
 
-Let's have a look at `~/.nix-profile` as well ...
+`cowsay` sits in the nix store. Let's talk about the **nix store**!
+
+---
+
+## Part 1: Meet the Nix Store
+
+`/nix/store/mhfaj4miflqz1abn60nnkrpaxcg310i9-cowsay-3.03+dfsg2`
+
+- Lives under `/nix/store`
+- Violates FHS
+- Has funny looking entries
+
+---
+
+## Part 1: Meet the Nix Store
+
+The **Nix Store** is (sort of) the **IO Monad of Nix**
+
+- **Haskell**: You use monadic actions to operate in IO
+- **Nix**: You use **derivations** (build actions) to operate on the Store
+
+:arrow_right: What does a derivation look like?
+
+---
+
+## Part 1: Meet your first Derivation
+
+```nix
+builtins.derivation {
+  name = "hello";
+  system = "x86_64-linux";
+  builder = "/bin/sh";
+  args = [ "-c" "echo 'hello' > $out; exit 0"];
+}
+```
+
+:computer: **hands-on** :computer:
+- `$ nix show-derivation $(nix-instantiate ./hello.nix)`
+- `$ nix-store --realise $(nix-instantiate ./hello.nix)`
+- Have a look at the result!
+
+---
+
+## Part 1: Meet your first Derivation
+
+- **.nix** ~= **.c** : human readable derivation
+- **.drv** ~= **.o** : machine readable derivation
+- **store output path** ~= **linked executable** : result
+
+also
+
+- `nix-instantiate`: **.nix** :arrow_right: **.drv**
+- `nix-store`: **.nix** :arrow_right: **store path**
+- `nix-build`: **.nix** :arrow_right: **store path**
+
+---
+
+## Part 1: Meet your first Derivation
+
+```nix
+builtins.derivation {
+  name = "hello";
+  system = "x86_64-linux";
+  builder = "/bin/sh";
+  args = [ "-c" "echo 'hello' > $out; exit 0"];
+}
+```
+
+- `$ nix-build`: gives us a `./result` symlink
+- The code seems very low-level, but we can **do better!**
+
+---
+
+## Part 1: Using <nixpkgs>
+
+```nix
+# default.nix
+{pkgs ? import <nixpkgs> {}}:
+pkgs.writeText "hello" "hello"
+```
+
+Don't worry about the syntax, we'll talk about it shortly...
+
+:computer: **hands-on** :computer:
+
+- `$ cat $(nix-build)`
+
+---
+# Nix Language Interlude
+
+**Attribute Sets**
+
+```nix
+{ a = 1; b = 2; c = 3; }
+```
+
+```nix
+{ a = 1; b = 2; c = 3; }.a # => 1
+```
+
+**Recursive Attribute Sets**
+
+```nix
+rec { a = 1; b = 2; c = a; }.c # => 1
+```
+
+---
+# Nix Language Interlude
+
+**Functions**
+
+```nix
+let
+    add = x: y: x + y
+in
+    add 40 2 # => 42
+```
+
+```nix
+let
+    add = {x, y}: x + y
+in
+    add { x = 40; y = 2; } # => 42
+```
+---
+
+# Nix Language Interlude
+
+**Default Arguments**
+
+```nix
+let
+    add = {x, y ? 2}: x + y
+in
+    add { x = 40 } # => 42
+```
+
+---
+
+# Nix Language Interlude
+
+**<nixpkgs>**
+
+- `<whatever>` whatever refers to a global variable `whatever`
+- `nixpkgs` is defined in the environment variable `NIX_PATH`
+- `<nixpkgs>` refers to the currently installed set of nixpkgs
+
 
 ---
 
