@@ -472,36 +472,83 @@ with (import <nixpkgs> {}); callPackage foo.nix {}
 
 ---
 
-## Part 1: Nix Tools 
+# Enough Talking, Let's Build Something!
 
-Let's get to know some of the common Nix tools. We have already learned about the concept of channels. We can use the `nix-channel` tool to work with them:
+---
+
+## Part 2: Haskell Howdy
 
 :computer: **hands-on** :computer:
 
-```shell
-$ nix-channel --list   # by default probably nixpkgs-unstable
-$ nix-channel --update # should produce some output
+Let's package (i.e create a derivation for) a program written in Haskell that prints _"howdy"_
+
+---
+
+## Part 2: Haskell Howdy
+```
+# default.nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.stdenv.mkDerivation {
+  pname =                     # :: String
+  version =                   # :: String
+  src =                       # :: Nix String
+  unpackPhase = ":";
+  buildInputs =  [ pkgs.ghc ]; 
+  buildPhase =                # :: String -- you can reference $src
+  installPhase =              # :: String -- place executables in $out/bin
+}
+```
+Use `nix-build` to build, check output in `./result`
+
+---
+```
+{ pkgs ? import <nixpkgs> {} }:
+
+let
+  helloSrc = pkgs.writeText "howdy.hs" ''
+    main = putStrLn "howdy"
+  '';
+in
+  pkgs.stdenv.mkDerivation {
+    pname = "haskell-howdy";
+    version = "0.1.0";
+    src = helloSrc;
+    unpackPhase = ":";
+    buildInputs = with pkgs; [ ghc ];
+    buildPhase = ''
+      ghc -o howdy $src
+    '';
+    installPhase = ''
+      mkdir -p $out/bin
+      cp howdy $out/bin
+    '';
+  }
+```
+---
+
+## Part 2: Meet The Shell
+
+There is one very nice tool that we haven't met yet: **nix-shell**
+
+```text
+$ nix-shell       # reads shell.nix or default.nix
+[nix-shell:~/]$   # shell with all buildInputs
+```
+
+It's also possible to specify packages on the command line:
+
+```text
+$ nix-shell -p ghc cabal-install
 ```
 
 ---
 
-## Part 1: Nix Tools 
-
-`nix-shell` is a great way to create ad-hoc environments!
-
-:computer: **hands-on** :computer:
-
-- Use `nix-shell` to get a shell with `ghc` and `cabal-install`
-- Use `-p` to specify packages
-- Try running the command with `--pure`, what's different?
-
-:arrow_right: **ad-hoc is nice, declarative is nicer! ...**
-
----
-
-## Part 1: Nix Tools 
+## Part 2: Creating A Haskell Shell
 
 ```nix
+# shell.nix
+
 { pkgs ? import <nixpkgs> {} }:
 pkgs.mkShell {
     buildInputs = with pkgs; [ ghc cabal-install ];
@@ -511,18 +558,87 @@ pkgs.mkShell {
 }
 ```
 
-:computer: **hands-on** :computer:
-
-- Can you mentally parse & undertand the above code? **Questions?**
-- Save the above in `shell.nix` & run `nix-shell`
+- `mkShell` is a convenient wrapper around `mkDerivation`
+- `shellHook` is executed when entering the shell
 
 ---
 
-## Part 2: Nix Tools
+# nixpkgs: Programming Languages Integration Interlude
+
+---
+
+## PL Integration Interlude
+
+There is support for integrating different languages/package managers:
+
+- NodeJS (npm2nix, yarn2nix, ...)
+- Go (go2nix)
+- Rust (carnix, crate2nix, ...)
+- Python
+- **Haskell**
+- ...
+
+---
+
+## PL Integration Interlude
+
+The concept is mostly the same for all languages:
+
+1. Parse dependency specification (`foo.cabal`, `package.json`, ...)
+2. Create Nix expressions with a derivation per dependency
+3. Provide functions that consume these derivations and invoke compilers/package managers
+
+---
+
+## PL Integration Interlude
+
+**Native workflow**: 
+1. Make arbitrary network requests to obtain deps and compile sources
+
+**Nix workflow**: 
+1. Populate the Nix Store with dependencies
+2. Compile sources using the hashed deps from the Nix store
+
+---
+
+## PL Integration Interlude
+
+- `aeson`, `libpng` and `firefox` are all on the same abstraction level
+- Global caching of artifacts for free
+- Not always trivial (_cough_, _NodeJS_, _cough_ ...)
+- Haskell Integration is among the best
+
+---
+
+## PL Integration Interlude: Haskell
+
+- There is a semi-automatic import of stackage snapshots
+- Packages are available under `pkgs.haskellPackages.*`
+- `pkgs.haskell.packages."${compiler}".*` for different ghc versions
+- Various useful functions are provided (we'll get to those..)
+---
+
+## Part 2: Nixifying A Haskell Project
+
+- https://github.com/gilligan/haskellx-code
+
+:computer: **hands-on** :computer:
+
+- Create a `shell.nix` 
+- Use `pkgs.mkShell`
+- Use `pkgs.haskellPackages.ghcWithPackages (hs: with hs; [<DEPS>])`
+- Or use `pkgs.haskell.packages."${compiler}".ghcWithPackages`
+- Add argument with default to pick `compiler`
+
+---
+
+## Part 2: Nixifying A Haskell Project
 
 ```nix
+# shell.nix
+
 { pkgs ? import <nixpkgs> {}
-, ghc ? "ghc864"
+, ghc ? "ghc865"
 }:
 let 
   hsPkgs = pkgs.haskell.packages."${ghc}";
@@ -532,7 +648,22 @@ in
     buildInputs = [ hsEnv pkgs.hlint ];
   }
 ```
+---
+
+## Part 2: Nixifying A Haskell Project
+
+So this works, but now we are redundantly specifying our Haskell dependencies in `shell.nix`. Not cool at all :-1: :-1: :-1:
+
+---
+
+## Part 2: Nixifying A Haskell Project
+
+We can do better by using `cabal2nix`: It parses a `.cabal` and creates an appropriate Nix expression.
 
 :computer: **hands-on** :computer:
 
-- Try specifying a different ghc version (**hint**: `nix-shell --arg`)
+```
+$ cabal2nix --shell . > shell.nix
+$ nix-shell
+```
+---
