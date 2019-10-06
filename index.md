@@ -654,6 +654,8 @@ in
 
 So this works, but now we are redundantly specifying our Haskell dependencies in `shell.nix`. Not cool at all :-1: :-1: :-1:
 
+But no worries, we can do better ...
+
 ---
 
 ## Part 2: Nixifying A Haskell Project
@@ -665,5 +667,10 @@ We can do better by using `cabal2nix`: It parses a `.cabal` and creates an appro
 ```
 $ cabal2nix --shell . > shell.nix
 $ nix-shell
+```
+Building the project also works
+
+```
+$ nix-build shell.nix
 ```
 ---
