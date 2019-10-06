@@ -335,131 +335,29 @@ pkgs.writeText "hello" "hello"
 
 ---
 
-## Part 1: Let's Jump Right In!
-
-Our user profile directory is symlinked
-```shell
-$ ls -l ~/.nix-profile
-~/.nix-profile -> /nix/var/nix/profiles/per-user/gilligan/profile
-```
-
-And our active user profile is also a symlink
-```shell
-ls -l ~/.nix-profile -> /nix/var/nix/profiles/per-user/gilligan/profile
-/nix/var/nix/profiles/per-user/gilligan/profile -> profile-150-link
-```
+# :coffee:
+# How about a little coffee break now?
+# :coffee:
 
 ---
 
-## Part 1: Let's Jump Right In!
+## Part 2: Quick Recap :bulb:
 
-What have we found out so far 
-
-- `nix-env -i` manipulates the user profile
-- Whatever you install ends up in the **nix store**
-- Directories in the store all include **hashes**
-
-:arrow_right: **Let's talk about the store ...**
-
----
-
-## Part 1: Nix Concepts
-
-The **Nix Store** is a central part of Nix
-
-- Your nix store lives at `/nix/store/`
-- Everything you install ends up in your nix store
-- Packages are installed to `/nix/store/<HASH>-<name>`
-- We need _Derivations_ to add something to the store
-
-:arrow_right: **What are Derivations ?**
+- Nix installs things into the Nix Store
+- Nix Store is like the _IO_ of Nix
+- IO : monadic actions ≅ Store : derivations
+- Nix has builtin `derivation` function
+- _nixpkgs_ provides convenience wrappers
+- `nix-env`, `nix-instantiate`, `nix-store`, `nix-build`
+- Nix Language (let bindings, functions, args, attrsets) 
 
 ---
 
-## Part 1: Nix Concepts
-
-A **Derivation** is _build action_
-
-- Takes inputs and when run, creates output(s) in the store
-- Can describe a single plain text file or ghc
-- All inputs of the derivation determine the associated hash
-
-:arrow_right: **Let's look at a little analogy...**
+## Part 2: Another Nix Language Interlude
 
 ---
 
-## Part 1: Nix Concepts
-
-- `.nix` ~= `.c` : human readable build description
-- `.drv` ~= `.o` : machine readable representation
-- `store output path` ~= resulting compiled&linked output
-
-:arrow_right: **Nice but where do the `nix` files come from?**
-
----
-
-## Part 1: Nix Concepts
-
-You might have heard of **nixpkgs**
-
-- Maintained at https://github.com/NixOS/nixpkgs
-- Official nix expression collection
-- Also contains all of NixOS
-
-:arrow_right: **Do you have to clone/track this repo? Nope...**
-
----
-
-## Part 1: Nix Concepts
-
-Packages can be installed from different **channels**
-
-- A channel refers to a commit in a nixpkgs branch
-- Different channels have different update strategies
-- `nixpkgs-unstable` is updated frequently
-- release channels like `nixos-19.03` are more conservative
-- https://howoldis.herokuapp.com/
-
----
-
-# Any burning questions so far?
-
----
-
-## Part 1: Nix Language
-
-Fortunately the Nix language is quite simple
-
-- Purely functional
-- Lazy Evaluation
-- Domain Specific
-
-:arrow_right: Let's quickly go through the most relevant features
-
----
-
-## Part 1: Nix Language
-
-Before we begin: If you want to try anything while we go through the
-language features, use `nix repl`:
-
-```shell
-$ nix repl
-Welcome to Nix version 2.2.2. Type :? for help.
-
-nix-repl> :l <nixpkgs>
-Added 10091 variables.
-
-nix-repl> 1 + 1
-2
-
-nix-repl>
-```
-
-
----
-
-## Part 1: Nix Language
+## Part 2: Another Nix Language Interlude
 
 Numbers
 
@@ -480,7 +378,7 @@ two
 ```
 ---
 
-## Part 1: Nix Language
+## Part 2: Another Nix Language Interlude
 
 Arrays (no separators!)
 
@@ -488,66 +386,15 @@ Arrays (no separators!)
 [ 4 2 ]  
 ```
 
-Attribute Sets
 ```nix
-{ a = 4; b = 2; }
+[ 4 ] ++ [ 2 ]  # => [ 4 2 ]
 ```
-
-Recursive Attribute Sets
-
-```nix
-rec { a = 5; b = a * 2 }
-```
-
 ---
 
+## Part 2: Another Nix Language Interlude
 ## Part 1: Nix Language
 
-Let Bindings
-
-```nix
-let
- a = 4;
- b = 2;
-in
- a * 10 + b
-```
-
-No `where` clauses though ;)
-
----
-
-## Part 1: Nix Language
-
-Functions in Nix are always just anonymous lambda expressions
-```nix
-name: "howdy there ${name}"
-```
-
-Functions with multiple arguments via currying
-```nix
-name: thing: "howdy there ${name} i heard you like ${thing}"
-```
-
----
-
-## Part 1: Nix Language
-
-We can also use **attribute sets** to pass multiple arguments:
-
-```nix
-let 
-    f = { name, thing }: "howdy there ${name} i heard you like ${thing}";
-in
-    f { name = "you"; thing = "me" }
-```
-
----
-
-
-## Part 1: Nix Language
-
-Unsurprisingly we have `if/then/else`
+Conditionals
 
 ```nix
 if this == "boring" 
@@ -557,7 +404,7 @@ if this == "boring"
 
 ---
 
-## Part 1: Nix Language
+## Part 2: Another Nix Language Interlude
 
 The `inherit` keyword injects bindings from the parent scope
 
@@ -567,29 +414,28 @@ let
     a = 40;
     b = 2;
 in
-    add { inherit a; inherit b; } # == { a = a; b = b; }
+    add { inherit a; inherit b; } # == add { a = a; b = b; }
 ```
 
 ---
 
 
-## Part 1: Nix Language
+## Part 2: Another Nix Language Interlude
 
 The `with` keyword brings all attributes from a given set into scope
 
 ```nix
 let
-    add = {a, b}: a + b;
-    foo = {a = 40; b = 2; };
+    fruits = { apples = "A"; oranges = "O"; lemons = "L" };
 in
-    with foo; add { inherit a; inherit b; }
+    with foo; [ apples oranges lemons ]
 ```
 
 ---
 
-## Part 1: Nix Language
+## Part 2: Another Nix Language Interlude
 
-The `import` keyword lets us allow nix files by specifying a path
+We can import files passig a literal path to `import`
 
 ```nix
 # add.nix
@@ -606,53 +452,23 @@ in
 ```
 
 ---
-## Part 1: Nix Language
 
-`nixpkgs` is the collection of all official nix expressions. We can refer to the **system installed nixpkgs** set in a nix expression via `<nixpkgs>`
+## Part 2: Another Nix Language Interlude
 
-:computer: **hands-on** :computer:
-
-:arrow_right: Why can referring to `<nixpkgs>` be problematic?
-:arrow_right: How could we avoid that?
-
----
-
-## Part 1: Nix Language
-
-nixpkgs defines `callPackage` - it **imports** a function specified by a path and passes all expected arguments that can be found in the current scope to it
-
-```
-# foo.nix
-{ zlib, hello }: ...
-```
-```
-# default.nix
-with (import <nixpkgs> {}); pkgs.callPackage ./foo.nix { }
-```
-
----
-
-## Part 1: Nix Language
-
-We have already learned about derivations. Nix has a built-in derivation function:
+Nasty, useful & not part of the language, `callPackage`:
 
 ```nix
-builtins.derivation { name = "haskellx"; 
-                      builder = "/bin/sh"; 
-                      system = "x86_64-linux";
-                      args = [ "-c" "echo done > $out; exit 0" ];
-                    }
+# default.nix
+with (import <nixpkgs> {}); callPackage foo.nix {}
 ```
 
-In practice you usually don't use this, you use `stdenv.mkDerivation` instead :exclamation:
+```nix
+# foo.nix
+{ zlib, gcc }: ...
+```
 
----
-
-## Part 1: Nix Language
-
-**That's it for the language. Any Questions? What's missing :)**
-
-:arrow_right: Next let's move on to talking about tooling
+- Looks at expected args (here: _zlib_, _gcc_)
+- Automatically passes args with matching name
 
 ---
 
