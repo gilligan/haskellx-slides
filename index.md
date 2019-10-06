@@ -102,6 +102,7 @@ Nix also has some _not-so-nice_ sides
 Some important bits up front
 
 - Nix is available for Linux/macOS
+- NixOS is a Linux distro built on top of Nix
 - Currently transitioning cli: `nix-*` vs `nix *`
 - All packages/libraries/NixOS are maintained in `nixpkgs` (GitHub)
 - Packages are available through subscribable **channels**
@@ -158,13 +159,36 @@ The **Nix Store** is (sort of) the **IO Monad of Nix**
 - **Haskell**: You use monadic actions to operate in IO
 - **Nix**: You use **derivations** (build actions) to operate on the Store
 
-:arrow_right: What does a derivation look like?
+:arrow_right: So what is a derivation?
+
+---
+
+## Part 1: Derivation ?
+
+A derivation is something that Nix can create for us if we provide at least the following:
+
+- A **name**
+- The **system** that we are targeting
+- A **builder** command/script
+
+
+---
+
+## Part 1: Derivation !
+
+Let's try to create the most basic thing:
+
+```haskell
+"hello" :: Nix String
+```
+What would that equate to in Nix?
 
 ---
 
 ## Part 1: Meet your first Derivation
 
 ```nix
+# hello.nix
 builtins.derivation {
   name = "hello";
   system = "x86_64-linux";
@@ -176,15 +200,14 @@ builtins.derivation {
 :computer: **hands-on** :computer:
 - `$ nix show-derivation $(nix-instantiate ./hello.nix)`
 - `$ nix-store --realise $(nix-instantiate ./hello.nix)`
-- Have a look at the result!
 
 ---
 
 ## Part 1: Meet your first Derivation
 
-- **.nix** ~= **.c** : human readable derivation
-- **.drv** ~= **.o** : machine readable derivation
-- **store output path** ~= **linked executable** : result
+- **.nix**	≅ **.c** : human readable derivation
+- **.drv** 	≅ **.o** : machine readable derivation
+- **store output path** ≅ **linked executable** : result
 
 also
 
@@ -194,7 +217,11 @@ also
 
 ---
 
-## Part 1: Meet your first Derivation
+## Part 1: Are we happy?
+
+```Haskell
+"hello" :: Nix String
+```
 
 ```nix
 builtins.derivation {
@@ -206,11 +233,11 @@ builtins.derivation {
 ```
 
 - `$ nix-build`: gives us a `./result` symlink
-- The code seems very low-level, but we can **do better!**
+- Way too much boilerplate, **we can do better!**
 
 ---
 
-## Part 1: Using <nixpkgs>
+## Part 1: Using `<nixpkgs>`
 
 ```nix
 # default.nix
@@ -225,7 +252,11 @@ Don't worry about the syntax, we'll talk about it shortly...
 - `$ cat $(nix-build)`
 
 ---
+
 # Nix Language Interlude
+
+---
+## Nix Language Interlude
 
 **Attribute Sets**
 
@@ -244,7 +275,7 @@ rec { a = 1; b = 2; c = a; }.c # => 1
 ```
 
 ---
-# Nix Language Interlude
+## Nix Language Interlude
 
 **Functions**
 
@@ -263,7 +294,7 @@ in
 ```
 ---
 
-# Nix Language Interlude
+## Nix Language Interlude
 
 **Default Arguments**
 
@@ -276,14 +307,31 @@ in
 
 ---
 
-# Nix Language Interlude
+## Nix Language Interlude
 
 **<nixpkgs>**
 
-- `<whatever>` whatever refers to a global variable `whatever`
+- `<whatever>` refers to a global variable `whatever`
 - `nixpkgs` is defined in the environment variable `NIX_PATH`
 - `<nixpkgs>` refers to the currently installed set of nixpkgs
 
+---
+
+# Back To Our Expression ...
+---
+
+## Part 1: Using `<nixpkgs>` (again..)
+
+```nix
+# default.nix
+{pkgs ? import <nixpkgs> {}}:
+pkgs.writeText "hello" "hello"
+```
+
+- Function with attribute set argument
+- Attribute Set with default argument
+- Function has `pkgs` in scope and we can make use of nixpkgs
+- `nix-env` or `nix-shell` try to call functions when possible
 
 ---
 
