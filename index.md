@@ -82,8 +82,8 @@ nix (Nix) 2.2.2
 Nix has some very nice qualities
 
 - **reproducibility**: No more _"but it (works for me|worked yesterday)"_
-- **reliable**: With atomic upgrades & rollbacks it's hard(er) to screw up
-- **functional**: If you hate repetitive YAML files you might like Nix 
+- **reliability**: With atomic upgrades & rollbacks it's hard to screw up
+- **abstraction**: If you hate repetitive YAML files you might like Nix 
 
 ---
 
@@ -118,54 +118,53 @@ Some important bits up front
 
 :computer: **hands-on** :computer:
 
-- Install **cowsay** using **nix-env**: `nix-env -i cowsay`
+- Install **ghc** using **nix-env**: `nix-env -i ghc`
 - Check it's installed using `nix-env -q`
-- **Question**: where is cowsay installed to :question:
+- Remove it again using `nix-env -e ghc`
+- Get a shell environment with ghc: `nix-shell -p ghc`
 
 ---
 
 ## Part 1: Where are things installed to?
 
-**Q**: Where is cowsay installed to?
+**Q**: Where is ghc installed to?
 **A**: Let's find out ...
 ```
-$ which cowsay
-/home/gilligan/.nix-profile/bin/cowsay
+$ which ghc
+/home/gilligan/.nix-profile/bin/ghc
 ```
 
 ```shell
 $ readlink $(which cowsay)
-/nix/store/mhfaj4miflqz1abn60nnkrpaxcg310i9-cowsay-3.03+dfsg2/bin/cowsay
+/nix/store/gvshp9yvc6gql09r3cyryj2zgsnfk6br-ghc-8.6.4/bin/ghc-8.6.4
 ```
 
-`cowsay` sits in the nix store. Let's talk about the **nix store**!
+`ghc` sits in the nix store. Let's talk about the **Nix Store**!
 
 ---
 
 ## Part 1: Meet the Nix Store
-
-`/nix/store/mhfaj4miflqz1abn60nnkrpaxcg310i9-cowsay-3.03+dfsg2`
 
 - Lives under `/nix/store`
-- Violates FHS
-- Has funny looking entries
+- Isolates packages from reach other
+- Has funny looking paths (sha256 of all inputs)
 
 ---
 
 ## Part 1: Meet the Nix Store
 
-The **Nix Store** is (sort of) the **IO Monad of Nix**
+The **Nix Store** is (sort of, but not really) the **IO Monad of Nix**
 
 - **Haskell**: You use monadic actions to operate in IO
 - **Nix**: You use **derivations** (build actions) to operate on the Store
 
-:arrow_right: So what is a derivation?
+So what is a derivation and how do we crate one?
 
 ---
 
 ## Part 1: Derivation ?
 
-A derivation is something that Nix can create for us if we provide at least the following:
+A **derivation** is something that we can create via `builtins.derivation` by providing at least the following:
 
 - A **name**
 - The **system** that we are targeting
@@ -185,35 +184,29 @@ What would that equate to in Nix?
 
 ---
 
-## Part 1: Meet your first Derivation
+## Part 1: Writing your first Derivation
 
 ```nix
 # hello.nix
 builtins.derivation {
-  name = "hello";
-  system = "x86_64-linux";
-  builder = "/bin/sh";
-  args = [ "-c" "echo 'hello' > $out; exit 0"];
+  name = "hello";                               # what should i call it?
+  system = builtins.currentSystem;              # where should it run?
+  builder = "/bin/sh";                          # how do i build it?
+  args = [ "-c" "echo 'hello' > $out; exit 0"]; # how do i build it?
 }
 ```
 
 :computer: **hands-on** :computer:
-- `$ nix show-derivation $(nix-instantiate ./hello.nix)`
-- `$ nix-store --realise $(nix-instantiate ./hello.nix)`
+- `$ cat $(nix-build)`
 
 ---
 
 ## Part 1: Meet your first Derivation
 
-- **.nix**	≅ **.c** : human readable derivation
-- **.drv** 	≅ **.o** : machine readable derivation
-- **store output path** ≅ **linked executable** : result
+What `nix-build` actually does:
 
-also
-
-- `nix-instantiate`: **.nix** :arrow_right: **.drv**
-- `nix-store`: **.nix** :arrow_right: **store path**
-- `nix-build`: **.nix** :arrow_right: **store path**
+1. Create a .drv file from the .nix file: `nix-instantiate`
+1. Run the build creating an output path: `nix-store --realise`
 
 ---
 
@@ -232,12 +225,11 @@ builtins.derivation {
 }
 ```
 
-- `$ nix-build`: gives us a `./result` symlink
-- Way too much boilerplate, **we can do better!**
+- That seems very low-level. **We can do better!**
 
 ---
 
-## Part 1: Using `<nixpkgs>`
+## Part 1: Writing Some Nix
 
 ```nix
 # default.nix
@@ -253,74 +245,7 @@ Don't worry about the syntax, we'll talk about it shortly...
 
 ---
 
-# Nix Language Interlude
-
----
-## Nix Language Interlude
-
-**Attribute Sets**
-
-```nix
-{ a = 1; b = 2; c = 3; }
-```
-
-```nix
-{ a = 1; b = 2; c = 3; }.a # => 1
-```
-
-**Recursive Attribute Sets**
-
-```nix
-rec { a = 1; b = 2; c = a; }.c # => 1
-```
-
----
-## Nix Language Interlude
-
-**Functions**
-
-```nix
-let
-    add = x: y: x + y
-in
-    add 40 2 # => 42
-```
-
-```nix
-let
-    add = {x, y}: x + y
-in
-    add { x = 40; y = 2; } # => 42
-```
----
-
-## Nix Language Interlude
-
-**Default Arguments**
-
-```nix
-let
-    add = {x, y ? 2}: x + y
-in
-    add { x = 40 } # => 42
-```
-
----
-
-## Nix Language Interlude
-
-**<nixpkgs>**
-
-- `<whatever>` refers to a global variable `whatever`
-- `nixpkgs` is defined in the environment variable `NIX_PATH`
-- `<nixpkgs>` refers to the currently installed set of nixpkgs
-
----
-
-# Back To Our Expression ...
----
-
-## Part 1: Using `<nixpkgs>` (again..)
+## Part 1: Writing Some Nix
 
 ```nix
 # default.nix
@@ -328,28 +253,95 @@ in
 pkgs.writeText "hello" "hello"
 ```
 
-- Function with attribute set argument
-- Attribute Set with default argument
-- Function has `pkgs` in scope and we can make use of nixpkgs
-- `nix-env` or `nix-shell` try to call functions when possible
+**Functions** in Nix:
+
+```nix
+let
+    f = a: b: a + b;
+    g = {a, b}: a + b;
+in
+    f 1 1 == g {a = 1; b = 1; } # => true
+```
 
 ---
 
-# :coffee:
-# How about a little coffee break now?
-# :coffee:
+## Part 1: Writing Some Nix
+
+```nix
+# default.nix
+{pkgs ? import <nixpkgs> {}}:
+pkgs.writeText "hello" "hello"
+```
+
+**Default Arguments** in Nix:
+```
+let
+    f = {a, b ? 1}: a + b;
+in
+    f {a = 1; b = 1; } == f { a = 1; } # => true
+```
 
 ---
 
-## Part 2: Quick Recap :bulb:
+## Part 1: Writing Some Nix
+
+```nix
+# default.nix
+{pkgs ? import <nixpkgs> {}}:
+pkgs.writeText "hello" "hello"
+```
+
+**Importing Files** in Nix:
+```
+let
+    versions = import ./versions.nix;
+in
+    versions.latest
+```
+
+---
+
+## Part 1: Writing Some Nix
+
+```nix
+# default.nix
+{pkgs ? import <nixpkgs> {}}:
+pkgs.writeText "hello" "hello"
+```
+
+**Nix path entries** in Nix:
+```shell
+$ nix-instantiate --eval -I x=/tmp/f.nix --expr '<x>' # => /tmp/f.nix
+```
+**Note**: `<nixpkgs>` has a special meaning in that it refers to the system installed set of nixpkgs.
+
+---
+
+## Part 1: Writing Some Nix
+
+```nix
+# default.nix
+{pkgs ? import <nixpkgs> {}}:
+pkgs.writeText "hello" "hello"
+```
+
+Does the above make sense for everyone now :question:
+
+---
+
+## Part 1: Quick Recap :bulb:
 
 - Nix installs things into the Nix Store
 - Nix Store is like the _IO_ of Nix
 - IO : monadic actions ≅ Store : derivations
-- Nix has builtin `derivation` function
-- _nixpkgs_ provides convenience wrappers
+- Nix has a builtin `derivation` function
+- nixpkgs provides various wrappers around `derivation`
 - `nix-env`, `nix-instantiate`, `nix-store`, `nix-build`
-- Nix Language (let bindings, functions, args, attrsets) 
+
+---
+
+# End of Part 1 ;-)
+
 
 ---
 
