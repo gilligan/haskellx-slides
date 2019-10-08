@@ -342,129 +342,9 @@ Does the above make sense for everyone now :question:
 
 # End of Part 1 ;-)
 
-
 ---
 
-## Part 2: Another Nix Language Interlude
-
----
-
-## Part 2: Another Nix Language Interlude
-
-Numbers
-
-```nix
-42       
-4.2
-```
-
-Strings
-
-```nix
-"42"     
-
-''
-forty
-two
-''
-```
----
-
-## Part 2: Another Nix Language Interlude
-
-Arrays (no separators!)
-
-```nix
-[ 4 2 ]  
-```
-
-```nix
-[ 4 ] ++ [ 2 ]  # => [ 4 2 ]
-```
----
-
-## Part 2: Another Nix Language Interlude
-## Part 1: Nix Language
-
-Conditionals
-
-```nix
-if this == "boring" 
-    then "i'm sorry" 
-    else "phew"
-```
-
----
-
-## Part 2: Another Nix Language Interlude
-
-The `inherit` keyword injects bindings from the parent scope
-
-```nix
-let
-    add = {a, b}: a + b;
-    a = 40;
-    b = 2;
-in
-    add { inherit a; inherit b; } # == add { a = a; b = b; }
-```
-
----
-
-
-## Part 2: Another Nix Language Interlude
-
-The `with` keyword brings all attributes from a given set into scope
-
-```nix
-let
-    fruits = { apples = "A"; oranges = "O"; lemons = "L" };
-in
-    with foo; [ apples oranges lemons ]
-```
-
----
-
-## Part 2: Another Nix Language Interlude
-
-We can import files passig a literal path to `import`
-
-```nix
-# add.nix
-{
-    add = a: b: a + b;
-}
-```
-```nix
-# default.nix
-let
-    add = (import ./add.nix).add;
-in
-    add 40 2
-```
-
----
-
-## Part 2: Another Nix Language Interlude
-
-Nasty, useful & not part of the language, `callPackage`:
-
-```nix
-# default.nix
-with (import <nixpkgs> {}); callPackage foo.nix {}
-```
-
-```nix
-# foo.nix
-{ zlib, gcc }: ...
-```
-
-- Looks at expected args (here: _zlib_, _gcc_)
-- Automatically passes args with matching name
-
----
-
-# Enough Talking, Let's Build Something!
+# Enough Talking, Let's Build Stuff!
 
 ---
 
@@ -477,15 +357,15 @@ Let's package (i.e create a derivation for) a program written in Haskell that pr
 ---
 
 ## Part 2: Haskell Howdy
-```
+```nix
 # default.nix
 { pkgs ? import <nixpkgs> {} }:
 
 pkgs.stdenv.mkDerivation {
   pname =                     # :: String
   version =                   # :: String
-  src =                       # :: Nix String
-  unpackPhase = ":";
+  src =                       # :: FilePath | Nix String
+  unpackPhase = ":";          # :: String -- don't do anything
   buildInputs =  [ pkgs.ghc ]; 
   buildPhase =                # :: String -- you can reference $src
   installPhase =              # :: String -- place executables in $out/bin
@@ -519,7 +399,7 @@ in
 ```
 ---
 
-## Part 2: Meet The Shell
+## Part 2: Using `nix-shell` environments
 
 There is one very nice tool that we haven't met yet: **nix-shell**
 
@@ -536,7 +416,7 @@ $ nix-shell -p ghc cabal-install
 
 ---
 
-## Part 2: Creating A Haskell Shell
+## Part 2: Using `nix-shell` environments
 
 ```nix
 # shell.nix
@@ -561,31 +441,8 @@ pkgs.mkShell {
 
 ## PL Integration Interlude
 
-There is support for integrating different languages/package managers:
-
-- NodeJS (npm2nix, yarn2nix, ...)
-- Go (go2nix)
-- Rust (carnix, crate2nix, ...)
-- Python
-- **Haskell**
-- ...
-
----
-
-## PL Integration Interlude
-
-The concept is mostly the same for all languages:
-
-1. Parse dependency specification (`foo.cabal`, `package.json`, ...)
-2. Create Nix expressions with a derivation per dependency
-3. Provide functions that consume these derivations and invoke compilers/package managers
-
----
-
-## PL Integration Interlude
-
 **Native workflow**: 
-1. Make arbitrary network requests to obtain deps and compile sources
+Make arbitrary network requests to obtain deps and compile sources
 
 **Nix workflow**: 
 1. Populate the Nix Store with dependencies
@@ -595,74 +452,288 @@ The concept is mostly the same for all languages:
 
 ## PL Integration Interlude
 
-- `aeson`, `libpng` and `firefox` are all on the same abstraction level
-- Global caching of artifacts for free
-- Not always trivial (_cough_, _NodeJS_, _cough_ ...)
-- Haskell Integration is among the best
+There is support for integrating different languages/package managers:
+
+- NodeJS
+- Go
+- Rust
+- Python
+- Haskell
+- ...
+
+---
+
+## PL Integration Interlude
+
+Mostly the same components to any language integration:
+
+1. Tool for parsing dependencies (`foo.cabal`, `Cargo.toml`, ...)
+2. Generating Nix expressions/derivations per dependency
+3. Functions consuming the tool output & building/compiling
 
 ---
 
 ## PL Integration Interlude: Haskell
 
-- There is a semi-automatic import of stackage snapshots
-- Packages are available under `pkgs.haskellPackages.*`
-- `pkgs.haskell.packages."${compiler}".*` for different ghc versions
-- Various useful functions are provided (we'll get to those..)
+What **maintainers** care about:
+
+- https://github.com/commercialhaskell/all-cabal-hashes
+- **hackage2nix** & **cabal2nix**: create *HUGE* `hackage-packages.nix`
+
+What **we** care about today:
+
+- **pkgs.haskellPackages.***
+
 ---
 
-## Part 2: Nixifying A Haskell Project
+# End Of Interlude ;-)
 
-- https://github.com/gilligan/haskellx-code
+---
+
+## Part 2: Nixifying A Haskell Project (1)
+
+https://github.com/gilligan/haskellx-hello-world
 
 :computer: **hands-on** :computer:
 
-- Create a `shell.nix` 
-- Use `pkgs.mkShell`
-- Use `pkgs.haskellPackages.ghcWithPackages (hs: with hs; [<DEPS>])`
-- Or use `pkgs.haskell.packages."${compiler}".ghcWithPackages`
-- Add argument with default to pick `compiler`
+```nix
+# shell.nix
+{ pkgs ? import <nixpkgs> {}}:
+let 
+# ?? pkgs.haskellPackages.ghcWithPackages (hs: [ <deps> ]); ??
+in
+# ??
+```
+
+- Try running `$ nix-shell`
 
 ---
 
-## Part 2: Nixifying A Haskell Project
+## Part 2: Nixifying A Haskell Project (1)
+
+This is my solution, yours might look similar:
 
 ```nix
 # shell.nix
 
-{ pkgs ? import <nixpkgs> {}
-, ghc ? "ghc865"
-}:
+{ pkgs ? import <nixpkgs> {}}:
 let 
-  hsPkgs = pkgs.haskell.packages."${ghc}";
+  hsPkgs = pkgs.haskellPackages;
   hsEnv = hsPkgs.ghcWithPackages (hsPkgs: with hsPkgs; [ scotty ]);
 in
   pkgs.mkShell {
-    buildInputs = [ hsEnv pkgs.hlint ];
+    buildInputs = [ hsEnv ];
   }
 ```
+
 ---
 
-## Part 2: Nixifying A Haskell Project
+## Part 2: Nixifying A Haskell Project (1)
 
 So this works, but now we are redundantly specifying our Haskell dependencies in `shell.nix`. Not cool at all :-1: :-1: :-1:
 
-But no worries, we can do better ...
+But no worries, **we can do better**
 
 ---
 
-## Part 2: Nixifying A Haskell Project
+## Part 2: Nixifying A Haskell Project (2)
 
-We can do better by using `cabal2nix`: It parses a `.cabal` and creates an appropriate Nix expression.
+We can do better by using `cabal2nix`: It parses a `.cabal` file and creates an appropriate Nix expression.
 
 :computer: **hands-on** :computer:
 
 ```
 $ cabal2nix --shell . > shell.nix
-$ nix-shell
 ```
-Building the project also works
+- Try `$ nix-shell`
+- Try `$ nix-build`
+
+---
+
+## Part 2: Nixifying A Haskell Project (3)
+
+`cabal2nix` is nice but do we really have to run it manually all the time? **Nope**, we can use `callCabal2nix`:
+
+:computer: **hands-on** :computer:
 
 ```
-$ nix-build shell.nix
+{ pkgs ? import <nixpkgs> {} }:
+let
+  hsPkgs = pkgs.haskellPackages;
+in
+  hsPkgs.callCabal2nix "hello-service" ./. {}
 ```
+- Save as `default.nix` & try `nix-shell` and `nix-build`
+
 ---
+
+## Part 2: Nixifying A Haskell Project (4)
+
+So far we have been sticking to some default ghc version by using
+
+- `pkgs.haskellPackages`
+
+Different versions are also available via
+
+- `pkgs.haskell.packages.${compiler}`
+
+Where compiler can be one of **ghc865**, **ghc864**, **ghc844** (availability depends on nixpkgs version)
+
+---
+
+## Part 2: Nixifying A Haskell Project (4)
+
+Adjust your most recent `default.nix` such that you can pick the ghc version to use
+
+:computer: **hands-on** :computer:
+
+- Add an argument to your top-level function
+- Use `pkgs.haskell.packages.${compiler}`
+- Try `nix-shell --argstr compiler ghc864`
+- Try `nix-build --argstr compiler ghc864`
+
+---
+
+## Part 2: Nixifying A Haskell Project (4)
+
+This is what I end up with: 
+
+```nix
+{ pkgs ? import <nixpkgs> {}
+, compiler ? "ghc864"
+}:
+
+let
+  hsPkgs = pkgs.haskell.packages.${compiler};
+in
+  hsPkgs.callCabal2nix "hello-service" ./. {}
+```
+
+---
+
+## Part 2: Nixifying A Haskell Project (5)
+
+Using `callCabal2nix` we get a derivation which can build our project. The shell we get isn't that great though.
+
+What if we want to add some more tools? 
+
+---
+
+## Part 2: Nixifying A Haskell Project (5)
+
+The ability to extend, compose and modify things is one of Nix' strong suits. We can override:
+
+- function arguments: [<pkg>.override](https://nixos.org/nixpkgs/manual/#sec-pkg-override) 
+- derivation attributes: [<pkg>.overrideAttrs](https://nixos.org/nixpkgs/manual/#sec-pkg-override)
+- nixpkgs as a whole: [packageOverrides](https://nixos.org/nixpkgs/manual/#sec-modify-via-packageOverrides)
+
+:question: 
+Our **default.nix** is fine for building but how could we add tools to our **nix-shell** environment?
+:question:
+
+---
+
+## Part 2: Nixifying A Haskell Project (5)
+
+Using `overrideAttrs`:
+
+```
+{ pkgs ? import <nixpkgs> {}}:
+let
+  helloUnchecked = pkgs.hello.overrideAttrs (old: rec {
+    doCheck = false;
+  });
+in
+  helloUnchecked
+```
+- `rec` is for **recursive attribute set**
+- `old` is the **original attribute set**
+
+---
+
+## Part 2: Nixifying A Haskell Project (5)
+
+Let's create a `shell.nix` that adds `hlint` and `ghcid`
+
+:computer: **hands-on** :computer:
+
+- Try importing your **default.nix** from your **shell.nix**
+- Try to use **overrideAttrs** to modify what you imported
+- Run `nix-shell` and check if it works
+
+---
+
+## Part 2: Nixifying A Haskell Project (5)
+
+This is what my solution looks like:
+
+```nix
+{ pkgs ? import <nixpkgs> {}
+, compiler ? "ghc864"
+}:
+
+(import ./. {inherit compiler;}).overrideAttrs(o: {
+  buildInputs = o.buildInputs ++ [pkgs.cabal-install pkgs.hlint]; 
+})
+```
+
+---
+
+## Part 2: Nixifying A Haskell Project (6)
+
+Let's check what we have covered so far
+
+- We can build it with Nix: :white_check_mark:
+- We can build it with different ghc versions: :white_check_mark:
+- We can define a development environment: :white_check_mark:
+- We can easily deploy our service to k8s: :x:
+
+---
+
+## Part 2: Nixifying A Haskell Project (6)
+
+Nix provides some very nice tooling to create docker images
+
+- no need for the docker daemon
+- fully deterministic
+- completely declarative
+- composable
+
+The output is a tarball that can be loaded via `docker load` or pushed to your registry using tools like [skopeo](https://github.com/containers/skopeo) (no docker daemon needed).
+
+---
+
+## Part 2: Nixifying A Haskell Project (6)
+
+Dockerizing our service is easy as pie: 
+
+```
+{ pkgs ? import <nixpkgs> {}
+, compiler ? "ghc864"
+}:
+
+let 
+  hello-service = import ./. { inherit compiler; };
+in
+  pkgs.dockerTools.buildLayeredImage {
+    name = "hello-service";
+    contents = [ pkgs.iana-etc ];
+    config.Cmd = [ "${hello-service}/bin/hello-service" ];
+  }
+```
+
+---
+
+## That's All Folks
+
+You are now certified Nix/Haskell Developers :sweat_smile:
+
+---
+
+## Links
+
+- [Nix By Example](https://medium.com/@MrJamesFisher/nix-by-example-a0063a1a4c55) blog by **James Fisher**
+- [Nix and Haskell in production](https://github.com/Gabriel439/haskell-nix) by **Gabriel Gonzales**
+- [Haskell Infra Section](https://nixos.org/nixpkgs/manual/#users-guide-to-the-haskell-infrastructure) in the **nixpkgs manual**
+- [haskell.nix](https://input-output-hk.github.io/haskell.nix/) alternative Haskell/Nix infra by **IOHK**
+- [static-haskell-nix](https://github.com/nh2/static-haskell-nix) fully static Haskell builds by **Niklas Hambüchen**
