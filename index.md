@@ -686,7 +686,7 @@ Let's check what we have covered so far
 - We can build it with Nix: :white_check_mark:
 - We can build it with different ghc versions: :white_check_mark:
 - We can define a development environment: :white_check_mark:
-- We can easily deploy our service to k8s: :x:
+- We can push it to production on k8s: :x:
 
 ---
 
