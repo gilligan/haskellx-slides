@@ -542,7 +542,7 @@ What **we** care about today:
 
 ## Part 2: Nixifying A Haskell Project (1)
 
-https://github.com/gilligan/haskellx-hello-world
+https://github.com/gilligan/haskellx-code
 
 :computer: **hands-on** :computer:
 
@@ -551,11 +551,10 @@ https://github.com/gilligan/haskellx-hello-world
 { pkgs ? import <nixpkgs> {}}:
 let 
 # ?? pkgs.haskellPackages.ghcWithPackages (hs: with hs; [ <deps> ]); ??
-in
-# ??
+in ??
 ```
-
-- Try running `$ nix-shell`
+- Do you have all dependencies you need? cabal-install?
+- Run `nix-shell` and try `cabal configure && cabal build`
 
 ---
 
@@ -597,7 +596,7 @@ $ cabal2nix --shell . > shell.nix
 ```
 - Use `nix-env -i cabal2nix` or `nix-shell -p cabal2nix`
 - Try `$ nix-shell`
-- Try `$ nix-build`
+- Try `$ nix-build shell.nix`
 
 ---
 
@@ -614,7 +613,7 @@ let
 in
   hsPkgs.callCabal2nix "hello-service" ./. {}
 ```
-- Save as `default.nix` & try `nix-shell` and `nix-build`
+- Save as `default.nix` & try `nix-build`
 
 ---
 
@@ -704,7 +703,7 @@ in
 
 ## Part 2: Nixifying A Haskell Project (5)
 
-Let's create a `shell.nix` that adds `hlint` and `ghcid`
+Let's create a `shell.nix` that adds `hlint` and `cabal-install`
 
 :computer: **hands-on** :computer:
 
@@ -793,8 +792,14 @@ https://tweag.io
 ## Links
 
 - [Nix By Example](https://medium.com/@MrJamesFisher/nix-by-example-a0063a1a4c55) blog by **James Fisher**
+- [A gentle introduction to the Nix family](https://ebzzry.io/en/nix/) - blog by **Rommel Martinez**
 - [Nix and Haskell in production](https://github.com/Gabriel439/haskell-nix) by **Gabriel Gonzales**
 - [Haskell Infra Section](https://nixos.org/nixpkgs/manual/#users-guide-to-the-haskell-infrastructure) in the **nixpkgs manual**
 - [haskell.nix](https://input-output-hk.github.io/haskell.nix/) alternative Haskell/Nix infra by **IOHK**
 - [static-haskell-nix](https://github.com/nh2/static-haskell-nix) fully static Haskell builds by **Niklas Hambüchen**
 
+---
+
+## Part 2: Bonus Round: VM Testing 
+
+How about we create an integration test in a single, small Nix file?
