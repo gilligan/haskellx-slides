@@ -207,7 +207,8 @@ Let's create the most basic "package": A simple text file
 ## Part 1: Writing your first Derivation
 
 ```nix
-# hello.nix
+# default.nix
+
 builtins.derivation {
   name = "hello";                               # what should i call it?
   system = builtins.currentSystem;              # where should it run?
@@ -221,22 +222,11 @@ builtins.derivation {
 
 ---
 
-## Part 1: Meet your first Derivation
-
-What `nix-build` actually does:
-
-1. Create a .drv file from the .nix file: `nix-instantiate`
-1. Run the build creating an output path: `nix-store --realise`
-
----
-
 ## Part 1: Are we happy?
 
-```Haskell
-"hello" :: Nix String
-```
-
 ```nix
+# default.nix
+
 builtins.derivation {
   name = "hello";
   system = "x86_64-linux";
@@ -245,7 +235,21 @@ builtins.derivation {
 }
 ```
 
-- That seems very low-level. **We can do better!**
+- That seems very low-level!
+- **We can do better!** but not with builtin functions only
+
+---
+
+## Part 1: nixpkgs and `<nixpkgs>`
+
+- https://github.com/NixOS/nixpkgs : All libs/packages/NixOS
+- **nixpkgs** is distributed through **channels**
+- `$ nix-channel --list && nix-channel --update`
+- `<nixpkgs>`: global variable refering to your **nixpkgs** copy
+
+**A gentle warning**
+
+Using `<nixpkgs>` means you lose reproducibility guarantees. But we are exploring so this is fine and we can carry on for now ...
 
 ---
 
@@ -329,11 +333,14 @@ in
 pkgs.writeText "hello" "hello"
 ```
 
-**Nix path entries** in Nix:
-```shell
-$ nix-instantiate --eval -I x=/tmp/f.nix --expr '<x>' # => /tmp/f.nix
+**Arrays** in Nix:
+```nix
+let
+    a = [ "foo" "bar" ]
+    b = [ "baz" ]
+in
+    a ++ b # => [ "foo" "bar" "baz"
 ```
-**Note**: `<nixpkgs>` has a special meaning in that it refers to the system installed set of nixpkgs.
 
 ---
 
@@ -352,11 +359,12 @@ Does the above make sense for everyone now :question:
 ## Part 1: Quick Recap :bulb:
 
 - Nix installs things into the Nix Store
-- Nix Store is like the _IO_ of Nix
-- IO : monadic actions ≅ Store : derivations
+- Realising Derivations puts things in the Store
 - Nix has a builtin `derivation` function
-- nixpkgs provides various wrappers around `derivation`
-- `nix-env`, `nix-instantiate`, `nix-store`, `nix-build`
+- **nixpkgs** contains all official libraries and packages
+- **nixpkgs** is distributed through channels
+- `<nixpkgs>` is a global variable referring to local nixpkgs
+- Commands: _nix-env_, _nix-build_, _nix-channel_
 
 ---
 
