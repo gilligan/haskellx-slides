@@ -352,6 +352,27 @@ in
 pkgs.writeText "hello" "hello"
 ```
 
+**Strings** in Nix:
+```nix
+let
+    a = ''multi
+    line
+    string'';
+    b = "FTW!"
+in
+    a + b # => "multi\nline\string\FTW!"
+```
+
+---
+
+## Part 1: Writing Some Nix
+
+```nix
+# default.nix
+{pkgs ? import <nixpkgs> {}}:
+pkgs.writeText "hello" "hello"
+```
+
 Does the above make sense for everyone now :question:
 
 ---
@@ -372,7 +393,7 @@ Does the above make sense for everyone now :question:
 
 ---
 
-# Enough Talking, Let's Build Stuff!
+# Enough Theory, Let's Build Something!
 
 ---
 
@@ -380,7 +401,7 @@ Does the above make sense for everyone now :question:
 
 :computer: **hands-on** :computer:
 
-Let's package (i.e create a derivation for) a program written in Haskell that prints _"howdy"_
+Let's package (i.e create a derivation for) a program written in Haskell that simply prints _"howdy"_
 
 ---
 
@@ -404,7 +425,6 @@ Use `nix-build` to build, check output in `./result`
 ---
 ```
 { pkgs ? import <nixpkgs> {} }:
-
 let
   helloSrc = pkgs.writeText "howdy.hs" ''
     main = putStrLn "howdy"
@@ -474,7 +494,7 @@ Make arbitrary network requests to obtain deps and compile sources
 
 **Nix workflow**: 
 1. Populate the Nix Store with dependencies
-2. Compile sources using the hashed deps from the Nix store
+2. Compile sources using the hashed deps from the Nix Store
 
 ---
 
@@ -493,11 +513,11 @@ There is support for integrating different languages/package managers:
 
 ## PL Integration Interlude
 
-Mostly the same components to any language integration:
+Mostly the same setup:
 
 1. Tool for parsing dependencies (`foo.cabal`, `Cargo.toml`, ...)
-2. Generating Nix expressions/derivations per dependency
-3. Functions consuming the tool output & building/compiling
+2. Tool generates Nix expressions/derivations per dependency
+3. Functions nixpkgs that consumes Nix expressions & triggers build
 
 ---
 
@@ -506,10 +526,12 @@ Mostly the same components to any language integration:
 What **maintainers** care about:
 
 - https://github.com/commercialhaskell/all-cabal-hashes
-- **hackage2nix** & **cabal2nix**: create *HUGE* `hackage-packages.nix`
+- **hackage2nix**: creates a *HUGE* `hackage-packages.nix`
+- Based on Stackage snapshot
 
 What **we** care about today:
 
+- _cabal2nix_
 - **pkgs.haskellPackages.***
 
 ---
@@ -528,7 +550,7 @@ https://github.com/gilligan/haskellx-hello-world
 # shell.nix
 { pkgs ? import <nixpkgs> {}}:
 let 
-# ?? pkgs.haskellPackages.ghcWithPackages (hs: [ <deps> ]); ??
+# ?? pkgs.haskellPackages.ghcWithPackages (hs: with hs; [ <deps> ]); ??
 in
 # ??
 ```
@@ -573,6 +595,7 @@ We can do better by using `cabal2nix`: It parses a `.cabal` file and creates an 
 ```
 $ cabal2nix --shell . > shell.nix
 ```
+- Use `nix-env -i cabal2nix` or `nix-shell -p cabal2nix`
 - Try `$ nix-shell`
 - Try `$ nix-build`
 
