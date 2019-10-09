@@ -11,17 +11,14 @@ Tobias Pflug (tobias.pflug@tweag.io)
 
 ## About Me
 
-```nix
+```shell
 {
     name = "Tobi";
     employer = "Tweag I/O";
     likes = [ 
         "haskell" 
         "nix" 
-        "rust" 
-        "neovim" 
-        "friendly people" 
-        "teaching Nix"
+        "friendly people"
     ];
 }
 ```
@@ -29,6 +26,8 @@ Tobias Pflug (tobias.pflug@tweag.io)
 ---
 
 ## About You
+
+Before we get started i'd like to learn a bit about you
 
 * Who has never used Nix before at all? :hand:
 * Who has already packaged something with Nix? :hand:
@@ -38,10 +37,11 @@ Tobias Pflug (tobias.pflug@tweag.io)
 
 ## About This Workshop
 
+Some things that are important to me about this workshop
+
 :arrow_right: Getting **lost**? Please let me know **!**
 :arrow_right: Getting **bored**? Maybe help those who got lost :sweat_smile: :question:
 :arrow_right: Nix is pretty **vast**, my goal is to get you _started_ & _intrigued_
-:arrow_right: I'd :heart: for this workshop to be **interactive**
 
 ---
 
@@ -51,7 +51,7 @@ Tobias Pflug (tobias.pflug@tweag.io)
 Understanding Nix, learning about the most relevant concepts and tools.
 
 * **Part 2** : **Haskell & Nix**
-We will take an existing Haskell project, nixify it and make use of the Haskell integration offered by Nix
+We will take some Haskell project, nixify it and discover the Nix/Haskell infrastructure together.
 
 ---
 
@@ -72,7 +72,7 @@ nix (Nix) 2.2.2
 
 ## Part 1: So What Is Nix?
 
-- A Functional Expression Language
+- A Lazy, Purely Functional Language (_DSL_)
 - A Package Manager
 
 ---
@@ -81,9 +81,9 @@ nix (Nix) 2.2.2
 
 Nix has some very nice qualities
 
-- **reproducibility**: No more _"but it (works for me|worked yesterday)"_
-- **reliability**: With atomic upgrades & rollbacks it's hard to screw up
-- **abstraction**: If you hate repetitive YAML files you might like Nix 
+- **Reproducible builds**: No more _"but it (works for me|worked yesterday)"_
+- **Safe to use**: With atomic operations, immutability and rollbacks it's hard to screw up
+- **Ability to abstract**: If you hate repetitive YAML files you might like Nix 
 
 ---
 
@@ -91,77 +91,102 @@ Nix has some very nice qualities
 
 Nix also has some _not-so-nice_ sides
 
-- **complexity**: Only pkg manager w/ the learning curve of Haskell
-- **documentation**: Getting better but sometimes still lacking
-- **purity**: Colliding with the impure rest of the world
+- **Complexity**: Only pkg manager w/ the learning curve of Haskell
+- **Documentation**: Getting better but sometimes still lacking
+- **Purity**: Colliding with the impure rest of the world
 
 ---
 
 ## Part 1: About
 
-Some important bits up front
+As a Hasell Developer, why should you care about Nix?
 
-- Nix is available for Linux/macOS
-- NixOS is a Linux distro built on top of Nix
-- Currently transitioning cli: `nix-*` vs `nix *`
-- All packages/libraries/NixOS are maintained in `nixpkgs` (GitHub)
-- Packages are available through subscribable **channels**
+- Cabal Hell? Cabal has improved a lot, not an issue anymore!
+- If you don't like Cabal you could still use Stack!
 
+**That's fair but ..**
 
+- With Nix I can also track non-Haskell deps
+- Nix gives me **one** abstraction method for "everything"
+- Can be used in parallel with Cabal/Stack
 ---
 
-# Enough Talking, Let's start using Nix right away ..
+# Enough Talking, Let's start using Nix
 
 ---
 
 ## Part 1: Let's Jump Right In!
 
+Let's use Nix as a simple package manager: Let's install **ghc**
+
 :computer: **hands-on** :computer:
 
-- Install **ghc** using **nix-env**: `nix-env -i ghc`
-- Check it's installed using `nix-env -q`
-- Remove it again using `nix-env -e ghc`
-- Get a shell environment with ghc: `nix-shell -p ghc`
+- Use `nix-env -qa` to list available packages
+- Use `nix-env -i` to install (omit version string)
+- Run `nix-env -q` to check it's been installed
+- Run `nix-env -e` to remove it again
 
 ---
 
 ## Part 1: Where are things installed to?
 
-**Q**: Where is ghc installed to?
-**A**: Let's find out ...
-```
-$ which ghc
-/home/gilligan/.nix-profile/bin/ghc
-```
+When you were using `nix-env` to install **ghc** where was that being installed to?
 
 ```shell
-$ readlink $(which cowsay)
+$ readlink $(which ghc)
 /nix/store/gvshp9yvc6gql09r3cyryj2zgsnfk6br-ghc-8.6.4/bin/ghc-8.6.4
 ```
 
-`ghc` sits in the nix store. Let's talk about the **Nix Store**!
+We just discovered the **Nix Store** and we should talk about that a bit
 
 ---
 
 ## Part 1: Meet the Nix Store
+
+```shell
+/nix/store/gvshp9yvc6gql09r3cyryj2zgsnfk6br-ghc-8.6.4/bin/ghc-8.6.4
+```
 
 - Lives under `/nix/store`
-- Isolates packages from reach other
-- Has funny looking paths (sha256 of all inputs)
+- Everytying you install ends up there (_No littering_)
+- Packages are isolated (_Solves a whole class of problems_)
+- Has funny looking paths (_sha256 over all build inputs_)
 
 ---
 
 ## Part 1: Meet the Nix Store
 
-The **Nix Store** is (sort of, but not really) the **IO Monad of Nix**
+```shell
+/nix/store/gvshp9yvc6gql09r3cyryj2zgsnfk6br-ghc-8.6.4/bin/ghc-8.6.4
+```
 
-- **Haskell**: You use monadic actions to operate in IO
-- **Nix**: You use **derivations** (build actions) to operate on the Store
+- **Q**: So how does ghc or anything else end up in the store?
+- **A**: By realising a derivation
 
-So what is a derivation and how do we crate one?
+So let's talk about **Derivations** ...
 
 ---
 
+## Part 1: Derivation ?
+
+Let's say we want to package & install some project **foo**. We start by writing `foo.nix` which specifies dependencies, build and install instructions.
+
+* `foo.nix` :arrow_right: _nix-build_ :arrow_right: `/nix/store/*-foo/*`
+* `foo.nix` :arrow_right: `/nix/store/*-foo.drv` :arrow_right: `/nix/store/*-foo/*`
+* _builtins.derivation_ :arrow_right: _nix-build_ :arrow_right: `/nix/store/*-foo.drv` :arrow_right: `/nix/store/*-foo/*`
+
+---
+
+## Part 1: Derivation ?
+
+Once more: What's A Derivation?
+
+- An **attribute set** that can be created by _builtins.derivation_
+- A **file** containing easy-to-parse, machine-readable build info
+- A **build action** which can be realised into a Nix Store path
+
+
+---
 ## Part 1: Derivation ?
 
 A **derivation** is something that we can create via `builtins.derivation` by providing at least the following:
@@ -175,12 +200,7 @@ A **derivation** is something that we can create via `builtins.derivation` by pr
 
 ## Part 1: Derivation !
 
-Let's try to create the most basic thing:
-
-```haskell
-"hello" :: Nix String
-```
-What would that equate to in Nix?
+Let's create the most basic "package": A simple text file
 
 ---
 
@@ -728,6 +748,15 @@ in
 
 You are now certified Nix/Haskell Developers :sweat_smile:
 
+
+---
+
+## By The Way
+
+If you Enjoy **Nix** and **Haskell** and happen to be looking for a job, **we are hiring**:
+
+https://tweag.io
+
 ---
 
 ## Links
@@ -737,3 +766,4 @@ You are now certified Nix/Haskell Developers :sweat_smile:
 - [Haskell Infra Section](https://nixos.org/nixpkgs/manual/#users-guide-to-the-haskell-infrastructure) in the **nixpkgs manual**
 - [haskell.nix](https://input-output-hk.github.io/haskell.nix/) alternative Haskell/Nix infra by **IOHK**
 - [static-haskell-nix](https://github.com/nh2/static-haskell-nix) fully static Haskell builds by **Niklas Hambüchen**
+
