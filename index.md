@@ -20,6 +20,7 @@ Tobias Pflug (tobias.pflug@tweag.io)
         "nix" 
         "friendly people"
     ];
+    organizerOf = "https://www.bus-conf.org";
 }
 ```
 
